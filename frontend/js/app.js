@@ -849,9 +849,13 @@ async function loadAiTab() {
         const res = await fetch(`${API_BASE}/api/ai/status`, { headers: getAuthHeaders() });
         const st = await res.json();
         const badge = document.getElementById("aiStatusBadge");
-        badge.textContent = st.configured ? `Gemini: ${st.model}` : "Chế độ dự phòng (chưa cấu hình GEMINI_API_KEY)";
+        badge.textContent = st.configured ? `Đã nhập khóa · ${st.model} (kết nối được kiểm tra khi gửi câu hỏi)` : "Chế độ dự phòng (chưa cấu hình GEMINI_API_KEY)";
         badge.className = "text-[11px] px-2 py-1 rounded-full " + (st.configured ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700");
-    } catch (e) { /* bỏ qua */ }
+    } catch (e) {
+        const badge = document.getElementById("aiStatusBadge");
+        badge.textContent = "Không kiểm tra được trạng thái AI. Hãy tải lại trang và đăng nhập.";
+        badge.className = "text-[11px] px-2 py-1 rounded-full bg-rose-100 text-rose-700";
+    }
     if (currentRole === "ADMIN") loadAiAdminStats();
 }
 
@@ -886,9 +890,12 @@ async function aiCall(path, body, btnId, outId) {
     const out = document.getElementById(outId);
     const oldLabel = btn.textContent;
     btn.disabled = true; btn.textContent = "Đang xử lý...";
-    out.textContent = "";
+    out.textContent = "Đang chờ câu trả lời, vui lòng đợi...";
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 75000);
     try {
         const res = await fetch(`${API_BASE}${path}`, {
+            signal: controller.signal,
             method: "POST",
             headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
             body: body ? JSON.stringify(body) : undefined
@@ -896,13 +903,18 @@ async function aiCall(path, body, btnId, outId) {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
             const msg = typeof data.detail === "string" ? data.detail : "Yêu cầu không hợp lệ";
+            out.textContent = `Không thể trả lời: ${msg}${res.status === 401 ? " Hãy đăng nhập lại." : ""}`;
             showToast(msg, true);
             return;
         }
+        if (!data.content) throw new Error("Máy chủ trả về câu trả lời rỗng");
         renderAiResult(out, data);
     } catch (e) {
-        showToast("Không kết nối được máy chủ", true);
+        const msg = e.name === "AbortError" ? "Yêu cầu quá thời gian. Hãy kiểm tra mạng và thử lại." : "Không kết nối được máy chủ hoặc phản hồi không hợp lệ. Hãy kiểm tra cửa sổ đang chạy PetCare.";
+        out.textContent = msg;
+        showToast(msg, true);
     } finally {
+        clearTimeout(timer);
         btn.disabled = false; btn.textContent = oldLabel;
     }
 }
@@ -956,7 +968,7 @@ function runAiSummary() {
 
 function runAiAsk() {
     const q = document.getElementById("aiQuestion").value.trim();
-    if (q.length < 3) { showToast("Vui lòng nhập câu hỏi (ít nhất 3 ký tự)", true); return; }
+    if (q.length < 3) { document.getElementById("aiAskOut").textContent = "Vui lòng nhập câu hỏi (ít nhất 3 ký tự)."; showToast("Vui lòng nhập câu hỏi (ít nhất 3 ký tự)", true); return; }
     const v = document.getElementById("aiPetSelect").value;
     aiCall("/api/ai/ask", { question: q, pet_id: v ? parseInt(v, 10) : null }, "btnAiAsk", "aiAskOut");
 }
