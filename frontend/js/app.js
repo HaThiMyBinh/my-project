@@ -141,12 +141,18 @@ async function preloadData() {
             fetch(`${API_BASE}/api/owners`, { headers: getAuthHeaders() }),
             fetch(`${API_BASE}/api/services`, { headers: getAuthHeaders() })
         ]);
-        cachedPets = await petsRes.json();
-        cachedOwners = await ownersRes.json();
-        cachedServices = await srvRes.json();
+        if (![petsRes, ownersRes, srvRes].every(res => res.ok)) {
+            throw new Error([petsRes, ownersRes, srvRes].some(res => res.status === 401) ? "Phiên đăng nhập hết hạn. Hãy đăng xuất và đăng nhập lại." : "Không tải được danh sách thú cưng, chủ nuôi hoặc dịch vụ. Kiểm tra cửa sổ máy chủ.");
+        }
+        const [pets, owners, services] = await Promise.all([petsRes.json(), ownersRes.json(), srvRes.json()]);
+        if (![pets, owners, services].every(Array.isArray)) throw new Error("Dữ liệu từ máy chủ không hợp lệ.");
+        cachedPets = pets;
+        cachedOwners = owners;
+        cachedServices = services;
         populateDropdowns();
     } catch (err) {
-        console.error("Lỗi tải cache:", err);
+        console.error("Lỗi tải dữ liệu:", err);
+        showToast(err.message || "Không tải được dữ liệu", true);
     }
 }
 
