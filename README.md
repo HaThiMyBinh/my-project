@@ -1,0 +1,103 @@
+# HỆ THỐNG QUẢN LÝ THÚ CƯNG VÀ LỊCH CHĂM SÓC CÓ TÍCH HỢP AI (PETCARE SPA)
+**Nhóm thực hiện: Nhóm 06**
+* **Hà Thị Mỹ Bình** - Product Owner (PO) kiêm Lead Backend Developer
+* **Nguyễn Thị Giang** - Scrum Master (SM) kiêm Frontend Developer & Tester
+
+Công nghệ: FastAPI + SQLAlchemy (SQLite) · HTML/JS + Tailwind · AI Engine: **Google Gemini**.
+
+---
+
+## 1. Cấu trúc dự án
+```text
+PetCare_Nhom6/
+├── backend/
+│   ├── db_tools.py               # sao lưu / khôi phục CSDL
+│   ├── app/
+│   │   ├── routers/              # auth, owners, pets, services, appointments, care_records,
+│   │   │                         # vaccinations, invoices, analytics, ai
+│   │   ├── services/
+│   │   │   ├── collision_service.py   # chống trùng lịch groomer
+│   │   │   ├── ai_service.py          # Gemini client + guardrail + retry/ngắt mạch/cache
+│   │   │   └── rate_limit.py          # giới hạn tần suất (đăng nhập, AI)
+│   │   ├── config.py             # nạp file .env
+│   │   ├── auth.py  database.py  models.py  schemas.py  main.py
+│   ├── tests/                    # pytest: lịch hẹn, hóa đơn, hồ sơ, AI
+│   ├── seed_data.py  requirements.txt  pytest.ini
+├── frontend/                     # SPA (index.html + js/app.js), có tab "Trợ Lý AI"
+├── docs/                         # ảnh minh chứng báo cáo
+├── Dockerfile  docker-compose.yml  docker-entrypoint.sh  DEPLOY.md
+├── .env.example  .gitignore  run_app.py  run.bat
+└── Bao_Cao_Tong_Hop_KT1_KT2_Nhom6.md
+```
+
+## 2. Chức năng
+**Quản lý:** đăng nhập JWT + phân quyền (ADMIN / RECEPTIONIST / GROOMER) · CRUD chủ nuôi, thú cưng, dịch vụ ·
+**gói dịch vụ** (combo, tự tính giá lẻ và mức tiết kiệm) · đặt/đổi/hủy lịch có chống trùng lịch (409) ·
+hồ sơ chăm sóc (thêm/sửa/xóa) · nhắc tiêm phòng · **hóa đơn, thu tiền nhiều lần, theo dõi công nợ** ·
+dashboard (doanh thu đã thu, công nợ, lượt theo dịch vụ, doanh thu theo tháng, tỷ lệ khách quay lại).
+
+| Nhóm | Endpoint chính |
+|---|---|
+| Gói dịch vụ | `GET/POST /api/packages`, `GET/PUT/DELETE /api/packages/{id}` (ghi: ADMIN) |
+| Hóa đơn | `POST /api/invoices` (có `paid_amount`), `POST /api/invoices/{id}/payments`, `POST /api/invoices/{id}/cancel` (ADMIN) |
+| Hồ sơ chăm sóc | `PUT /api/care-records/{id}`, `DELETE /api/care-records/{id}` (ADMIN) |
+| Thống kê | `GET /api/analytics/dashboard`, `/services`, `/revenue?period=month\|day` |
+
+Trạng thái hóa đơn: `PAID` (đã thu đủ) · `PARTIAL` (còn nợ) · `UNPAID` (chưa thu) · `CANCELLED` (không tính doanh thu/công nợ).
+
+**AI (Gemini):**
+| Chức năng | Endpoint | Mô tả |
+|---|---|---|
+| Nhắc lịch | `POST /api/ai/reminder` | Soạn tin nhắn nhắc lịch spa hoặc lịch tiêm nhắc lại cho chủ nuôi |
+| Tóm tắt hồ sơ | `POST /api/ai/summary/{pet_id}` | Tóm tắt hồ sơ chăm sóc gần đây của thú cưng |
+| Hỏi đáp | `POST /api/ai/ask` | Trả lời câu hỏi chăm sóc cơ bản, kèm cảnh báo hỏi bác sĩ thú y |
+| Trạng thái | `GET /api/ai/status` | Cho biết đã cấu hình Gemini chưa |
+
+### An toàn khi dùng AI
+1. **Cảnh báo cố định** "AI không thay thế bác sĩ thú y" được gắn từ phía code ở mọi phản hồi và hiển thị trên giao diện.
+2. **Lọc đầu vào (không gọi AI):** câu hỏi có dấu hiệu khẩn cấp (co giật, khó thở, nôn ra máu, ăn nhầm socola...) →
+   trả lời cố định, khuyên gặp bác sĩ thú y ngay. Câu hỏi xin chẩn đoán / kê đơn / liều thuốc → từ chối.
+   Câu cố tình vượt rào (prompt injection) → từ chối.
+3. **System prompt** giới hạn phạm vi; dữ liệu người dùng bọc trong thẻ `<du_lieu>`, `<cau_hoi>` và được coi là dữ liệu, không phải chỉ thị.
+4. **Lọc đầu ra:** nếu AI lỡ nêu liều thuốc / kê đơn, câu trả lời bị thay bằng lời từ chối.
+5. **Quyền riêng tư:** chỉ gửi tên chủ nuôi, thông tin thú cưng và hồ sơ chăm sóc; **không gửi** số điện thoại, địa chỉ, email.
+6. **Dự phòng:** chưa có API key hoặc Gemini lỗi → hệ thống dùng mẫu tin nhắn/tóm tắt cố định, không bị sập.
+
+## 3. Cài đặt và chạy
+```bash
+pip install -r backend/requirements.txt          # chạy test thì dùng requirements-dev.txt
+cp .env.example .env            # Windows: copy .env.example .env
+# mở .env, điền GEMINI_API_KEY (lấy tại https://aistudio.google.com/apikey) và đặt SECRET_KEY riêng
+python backend/seed_data.py     # CHỈ dùng cho demo: xóa toàn bộ dữ liệu hiện có
+python run_app.py               # hoặc double-click run.bat trên Windows
+```
+* Giao diện: http://127.0.0.1:8000/app/index.html · Swagger: http://127.0.0.1:8000/docs
+* Lệnh `seed_data.py` xóa toàn bộ bảng và dữ liệu hiện có. Chỉ chạy trên CSDL demo mới, không chạy trên dữ liệu thực.
+* Đổi `SECRET_KEY` và tài khoản demo trước khi triển khai; tài khoản demo không phù hợp cho môi trường thực.
+* Nếu **không** điền `GEMINI_API_KEY`, ứng dụng vẫn chạy ở chế độ dự phòng; các bài test sử dụng Gemini giả lập.
+
+**Tài khoản demo:** `admin/admin123` · `letan/letan123` · `groomer/groomer123`
+
+### Cấu hình Gemini trên Windows
+
+Chạy `cai_dat_gemini.bat`, dán khóa sau `GEMINI_API_KEY=` trong Notepad, lưu và đóng. Khởi động lại bằng `run.bat`. Tệp cấu hình sẵn có được giữ nguyên. `run.bat` không tự nạp lại dữ liệu mẫu; chỉ chạy `seed_data.py` khi muốn xóa dữ liệu cũ để tạo demo.
+
+## 4. Chạy test
+```bash
+pip install -r backend/requirements-dev.txt
+cd backend
+pytest
+```
+Test không gọi Gemini thật (đã giả lập). Gồm: lịch hẹn (trùng, liền kề, đổi, hủy, phân quyền, validate),
+hóa đơn (tính tiền, giảm giá, thu nhiều lần, công nợ, hủy, doanh thu), gói dịch vụ, hồ sơ chăm sóc, thống kê, và AI
+(41 câu hỏi: 31 câu bẫy y tế thú y + 10 câu thường, lọc đầu ra, fallback, bảo mật dữ liệu, endpoint).
+
+## 5. Docker, sao lưu, tài liệu
+* Docker: `docker compose up --build` (xem **DEPLOY.md**: biến môi trường, sao lưu/khôi phục, checklist triển khai, xử lý sự cố).
+* Sao lưu/khôi phục CSDL: `python backend/db_tools.py backup | list | verify | restore <file> --yes`.
+* Bảo mật & ổn định: khóa đăng nhập sau 5 lần sai, giới hạn 20 lượt AI/phút/người, thử lại + ngắt mạch + cache cho Gemini, che SĐT/địa chỉ với vai trò GROOMER, nhật ký AI không lưu nội dung, `/api/health`.
+* Tài liệu: `Bao_Cao_Cuoi_Ky_Nhom6.md` (báo cáo tổng hợp + tự đánh giá 10 tiêu chí), `Bao_Cao_KT3_Nhom6.md` (AI), `KICH_BAN_DEMO.md` (kịch bản demo và câu hỏi dự kiến).
+
+## 6. Lưu ý khi nộp / dùng Git
+* Không commit `.env` và `petcare.db` (đã có trong `.gitignore`). Tạo lại CSDL bằng `seed_data.py`.
+* Không dán API key vào mã nguồn, báo cáo hay ảnh chụp màn hình.

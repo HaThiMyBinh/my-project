@@ -1,0 +1,20 @@
+# Chạy:  docker compose up --build        (mở http://localhost:8000/app/index.html)
+# Biến môi trường được đọc tự động từ file .env cùng thư mục (xem .env.example).
+services:
+  petcare:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      SECRET_KEY: ${SECRET_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
+      AI_RATE_LIMIT_PER_MIN: ${AI_RATE_LIMIT_PER_MIN:-20}
+      LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    volumes:
+      - petcare-data:/data
+    restart: unless-stopped
+
+volumes:
+  petcare-data:

@@ -1,0 +1,17 @@
+# Bí mật & môi trường
+.env
+backend/.env
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# CSDL cục bộ (tạo lại bằng: python backend/seed_data.py)
+*.db
+
+# IDE
+.vscode/
+.idea/

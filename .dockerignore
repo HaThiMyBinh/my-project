@@ -1,0 +1,11 @@
+.git
+.env
+backend/.env
+**/__pycache__
+*.pyc
+*.db
+backups
+docs
+.pytest_cache
+backend/tests
+Bao_Cao_*.md
