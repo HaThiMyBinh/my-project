@@ -97,8 +97,9 @@ async function showApp() {
     document.getElementById("userName").innerText = currentUserName;
     document.getElementById("userRole").innerText = currentRole;
 
+    applyRoleVisibility();
     await preloadData();
-    switchTab("dashboard");
+    switchTab(currentRole === "GROOMER" ? "appointments" : "dashboard");
 }
 
 function getAuthHeaders() {
@@ -108,8 +109,21 @@ function getAuthHeaders() {
     };
 }
 
+// Giao diện chỉ hiển thị thao tác phù hợp; API vẫn kiểm tra quyền độc lập.
+function applyRoleVisibility() {
+    document.querySelectorAll("[data-roles]").forEach(el => {
+        const allowed = el.dataset.roles.split(" ").includes(currentRole);
+        el.classList.toggle("hidden", !allowed);
+    });
+}
+
 // TAB SWITCHING
 function switchTab(tabName) {
+    const tab = document.getElementById(`tab-${tabName}`);
+    if (!tab || (tab.dataset.roles && !tab.dataset.roles.split(" ").includes(currentRole))) {
+        showToast("Bạn không có quyền truy cập chức năng này", true);
+        return;
+    }
     const tabs = ["dashboard", "appointments", "pets", "services", "health", "vaccine", "invoices", "ai"];
     tabs.forEach(t => {
         const btn = document.getElementById(`tab-${t}`);
@@ -160,15 +174,15 @@ function populateDropdowns() {
     // App modal dropdowns
     const petSelect = document.getElementById("appPetSelect");
     if (petSelect) {
-        petSelect.innerHTML = cachedPets.map(p => `<option value="${p.pet_id}">[#${p.pet_id}] ${p.pet_name} (${p.breed || p.pet_type})</option>`).join("");
+        petSelect.innerHTML = cachedPets.map(p => `<option value="${p.pet_id}">[#${p.pet_id}] ${escapeHtml(p.pet_name)} (${escapeHtml(p.breed || p.pet_type)})</option>`).join("");
     }
     const srvSelect = document.getElementById("appServiceSelect");
     if (srvSelect) {
-        srvSelect.innerHTML = cachedServices.map(s => `<option value="${s.service_id}">${s.service_name} (${s.duration_minutes}p - ${s.price.toLocaleString()}đ)</option>`).join("");
+        srvSelect.innerHTML = cachedServices.map(s => `<option value="${s.service_id}">${escapeHtml(s.service_name)} (${s.duration_minutes}p - ${s.price.toLocaleString()}đ)</option>`).join("");
     }
     const ownerSelect = document.getElementById("petOwnerSelect");
     if (ownerSelect) {
-        ownerSelect.innerHTML = cachedOwners.map(o => `<option value="${o.owner_id}">#${o.owner_id} - ${o.full_name} (${o.phone})</option>`).join("");
+        ownerSelect.innerHTML = cachedOwners.map(o => `<option value="${o.owner_id}">#${o.owner_id} - ${escapeHtml(o.full_name)} (${escapeHtml(o.phone)})</option>`).join("");
     }
 }
 
@@ -225,12 +239,12 @@ async function loadAppointments() {
                 <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
                     <td class="p-3 font-bold text-slate-700">#LH${a.appointment_id}</td>
                     <td class="p-3">
-                        <strong class="text-blue-900">${pet.pet_name}</strong>
-                        <div class="text-[10px] text-slate-500">${pet.breed}</div>
+                        <strong class="text-blue-900">${escapeHtml(pet.pet_name)}</strong>
+                        <div class="text-[10px] text-slate-500">${escapeHtml(pet.breed)}</div>
                     </td>
-                    <td class="p-3 text-slate-600">${srv.service_name}</td>
+                    <td class="p-3 text-slate-600">${escapeHtml(srv.service_name)}</td>
                     <td class="p-3 font-medium text-slate-800">
-                        <i class="fa-solid fa-user-gear text-slate-400 mr-1"></i> ${a.groomer_name}
+                        <i class="fa-solid fa-user-gear text-slate-400 mr-1"></i> ${escapeHtml(a.groomer_name)}
                     </td>
                     <td class="p-3">
                         <div>📅 ${a.appointment_date}</div>
@@ -238,7 +252,7 @@ async function loadAppointments() {
                     </td>
                     <td class="p-3">${statusBadge}</td>
                     <td class="p-3 text-right space-x-1">
-                        ${a.status === "CONFIRMED" ? `
+                        ${a.status === "CONFIRMED" && currentRole !== "GROOMER" ? `
                             <button onclick="openAppointmentModal(${a.appointment_id})" class="text-blue-700 px-2">Sửa</button>
                             ${currentRole !== "GROOMER" ? `<button onclick="cancelApp(${a.appointment_id})" class="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-xs" title="Hủy lịch">
                                 <i class="fa-solid fa-ban"></i>
@@ -660,15 +674,15 @@ async function loadVaccines() {
                 <td class="p-3 font-bold text-slate-600">#TC${v.reminder_id}</td>
                 <td class="p-3 font-semibold text-blue-900">Bé #${v.pet_id}</td>
                 <td class="p-3 font-medium text-slate-800">${escapeHtml(v.vaccine_name)}</td>
-                <td class="p-3 text-slate-500">${v.last_date || 'Chưa ghi'}</td>
-                <td class="p-3 font-bold text-amber-700">📅 ${v.next_due_date}</td>
+                <td class="p-3 text-slate-500">${escapeHtml(v.last_date || 'Chưa ghi')}</td>
+                <td class="p-3 font-bold text-amber-700">📅 ${escapeHtml(v.next_due_date)}</td>
                 <td class="p-3">
                     <span class="px-2 py-0.5 rounded text-[10px] font-bold ${v.status === 'DONE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
                         ${v.status === 'DONE' ? 'Đã tiêm' : 'Chờ tiêm'}
                     </span>
                 </td>
                 <td class="p-3 text-right">
-                    ${currentRole !== 'GROOMER' ? `<button onclick="openVaccineModal(${v.reminder_id})" class="text-blue-700 px-2">Sửa</button><button onclick="deleteVaccine(${v.reminder_id})" class="text-rose-700 px-2">Xóa</button>` : ''}
+                    ${currentRole !== 'GROOMER' ? `<button onclick="openVaccineModal(${v.reminder_id})" class="text-blue-700 px-2">Sửa</button>` : ''}${currentRole === 'ADMIN' ? `<button onclick="deleteVaccine(${v.reminder_id})" class="text-rose-700 px-2">Xóa</button>` : ''}
                     ${currentRole !== 'GROOMER' && v.status === 'PENDING' ? `
                         <button onclick="markVaccineDone(${v.reminder_id})" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs">
                             <i class="fa-solid fa-check mr-1"></i> Đã tiêm

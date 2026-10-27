@@ -69,3 +69,36 @@ def test_delete_record_admin_only(client, auth):
     assert client.delete(f"/api/care-records/{rid}", headers=auth("admin")).status_code == 200
     assert client.get(f"/api/care-records/{rid}", headers=auth("admin")).status_code == 404
     assert client.delete(f"/api/care-records/{rid}", headers=auth("admin")).status_code == 404
+
+
+def test_rejects_appointment_for_another_pet_without_changing_it(client, auth, db_session):
+    from app import models
+    db_session.add(models.Pet(owner_id=1, pet_name="Bé thứ hai", pet_type="CHO", weight=3))
+    db_session.commit()
+    headers = auth("letan")
+    appt = client.post("/api/appointments", headers=headers, json={
+        "pet_id": 1, "service_id": 1, "groomer_name": "A",
+        "appointment_date": "2099-05-01", "start_time": "09:00", "end_time": "10:00"
+    }).json()
+    response = client.post("/api/care-records", headers=headers,
+                           json=record(pet_id=2, appointment_id=appt["appointment_id"]))
+    assert response.status_code == 422
+    assert client.get("/api/care-records", headers=headers).json() == []
+    appointments = client.get("/api/appointments", headers=headers).json()
+    assert appointments[0]["status"] == "CONFIRMED"
+
+
+def test_rejects_missing_and_cancelled_appointment(client, auth):
+    headers = auth("letan")
+    assert client.post("/api/care-records", headers=headers,
+                       json=record(appointment_id=999)).status_code == 404
+    appt = client.post("/api/appointments", headers=headers, json={
+        "pet_id": 1, "service_id": 1, "groomer_name": "A",
+        "appointment_date": "2099-05-01", "start_time": "09:00", "end_time": "10:00"
+    }).json()
+    app_id = appt["appointment_id"]
+    assert client.delete(f"/api/appointments/{app_id}", headers=headers).status_code == 200
+    assert client.post("/api/care-records", headers=headers,
+                       json=record(appointment_id=app_id)).status_code == 409
+    assert client.get("/api/care-records", headers=headers).json() == []
+    assert client.get("/api/appointments", headers=headers).json()[0]["status"] == "CANCELLED"

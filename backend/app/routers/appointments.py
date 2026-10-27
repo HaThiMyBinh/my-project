@@ -74,7 +74,7 @@ def update_appointment(
     app_id: int,
     app_in: AppointmentUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_role(["ADMIN", "RECEPTIONIST", "GROOMER"]))
+    current_user = Depends(require_role(["ADMIN", "RECEPTIONIST"]))
 ):
     app = db.query(Appointment).filter(Appointment.appointment_id == app_id).first()
     if not app:

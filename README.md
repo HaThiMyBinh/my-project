@@ -24,10 +24,9 @@ PetCare_Nhom6/
 │   ├── tests/                    # pytest: lịch hẹn, hóa đơn, hồ sơ, AI
 │   ├── seed_data.py  requirements.txt  pytest.ini
 ├── frontend/                     # SPA (index.html + js/app.js), có tab "Trợ Lý AI"
-├── docs/                         # ảnh minh chứng báo cáo
 ├── Dockerfile  docker-compose.yml  docker-entrypoint.sh  DEPLOY.md
 ├── .env.example  .gitignore  run_app.py  run.bat
-└── Bao_Cao_Tong_Hop_KT1_KT2_Nhom6.md
+└── KICH_BAN_DEMO.md             # kịch bản demo
 ```
 
 ## 2. Chức năng
@@ -63,6 +62,21 @@ Trạng thái hóa đơn: `PAID` (đã thu đủ) · `PARTIAL` (còn nợ) · `U
 5. **Quyền riêng tư:** chỉ gửi tên chủ nuôi, thông tin thú cưng và hồ sơ chăm sóc; **không gửi** số điện thoại, địa chỉ, email.
 6. **Dự phòng:** chưa có API key hoặc Gemini lỗi → hệ thống dùng mẫu tin nhắn/tóm tắt cố định, không bị sập.
 
+### Phân quyền theo vai trò
+
+| Chức năng | Quản trị (ADMIN) | Lễ tân (RECEPTIONIST) | Chăm sóc (GROOMER) |
+|---|---|---|---|
+| Khách hàng, thú cưng | Xem, thêm, sửa, xóa | Xem, thêm, sửa | Xem; thông tin liên hệ được che |
+| Dịch vụ và gói | Xem, thêm, sửa, xóa | Xem | Xem |
+| Lịch hẹn | Xem, đặt, đổi, hủy | Xem, đặt, đổi, hủy | Xem |
+| Hồ sơ chăm sóc | Xem, thêm, sửa, xóa | Xem, thêm, sửa | Xem, thêm, sửa |
+| Lịch tiêm nhắc | Xem, thêm, sửa, xóa | Xem, thêm, sửa, đánh dấu hoàn thành | Xem |
+| Hóa đơn và thanh toán | Xem, lập, thu tiền, hủy | Xem, lập, thu tiền | Không truy cập |
+| Thống kê | Xem | Xem | Không truy cập |
+| Trợ lý AI | Dùng và xem nhật ký | Dùng | Dùng |
+
+Quyền được kiểm tra tại API theo vai trò tài khoản trong CSDL; ẩn nút chỉ để giao diện dễ sử dụng. Nhân viên chăm sóc hiện thấy lịch và hồ sơ của tất cả thú cưng, chưa có phân công theo từng nhân viên. Tài khoản mẫu chỉ dùng để demo.
+
 ## 3. Cài đặt và chạy
 ```bash
 pip install -r backend/requirements.txt          # chạy test thì dùng requirements-dev.txt
@@ -96,8 +110,15 @@ hóa đơn (tính tiền, giảm giá, thu nhiều lần, công nợ, hủy, doa
 * Docker: `docker compose up --build` (xem **DEPLOY.md**: biến môi trường, sao lưu/khôi phục, checklist triển khai, xử lý sự cố).
 * Sao lưu/khôi phục CSDL: `python backend/db_tools.py backup | list | verify | restore <file> --yes`.
 * Bảo mật & ổn định: khóa đăng nhập sau 5 lần sai, giới hạn 20 lượt AI/phút/người, thử lại + ngắt mạch + cache cho Gemini, che SĐT/địa chỉ với vai trò GROOMER, nhật ký AI không lưu nội dung, `/api/health`.
-* Tài liệu: `Bao_Cao_Cuoi_Ky_Nhom6.md` (báo cáo tổng hợp + tự đánh giá 10 tiêu chí), `Bao_Cao_KT3_Nhom6.md` (AI), `KICH_BAN_DEMO.md` (kịch bản demo và câu hỏi dự kiến).
+* Tài liệu demo: `KICH_BAN_DEMO.md`. Các báo cáo và hình minh họa không có trong bản đóng gói này.
 
 ## 6. Lưu ý khi nộp / dùng Git
 * Không commit `.env` và `petcare.db` (đã có trong `.gitignore`). Tạo lại CSDL bằng `seed_data.py`.
 * Không dán API key vào mã nguồn, báo cáo hay ảnh chụp màn hình.
+
+
+## 7. Cập nhật khi đã có dữ liệu
+
+Bản nộp không chứa `.env`, khóa API hay `petcare.db`. Nếu bạn đã có dữ liệu thực hoặc dữ liệu demo trên máy, hãy sao lưu tệp `.env` và `petcare.db` ở thư mục cũ trước khi cập nhật. Sao chép hai tệp này vào thư mục dự án mới trên máy cá nhân, không gửi chúng cùng bản nộp. **Không chạy `seed_data.py` nếu muốn giữ dữ liệu hiện có** vì lệnh này xóa dữ liệu cũ. Với bản cài đặt mới, chạy lệnh seed một lần để tạo tài khoản và dữ liệu mẫu.
+
+Các câu trả lời AI chỉ mang tính tham khảo; kiểm thử tự động giả lập Gemini, không chứng minh dịch vụ ngoài luôn hoạt động. Tránh nhập dữ liệu cá nhân nhạy cảm trong câu hỏi và ghi chú gửi AI.

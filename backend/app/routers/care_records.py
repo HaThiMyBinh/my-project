@@ -29,12 +29,19 @@ def create_care_record(
     pet = db.query(Pet).filter(Pet.pet_id == rec_in.pet_id).first()
     if not pet:
         raise HTTPException(status_code=404, detail="Thú cưng không tồn tại")
-    rec = CareRecord(**rec_in.dict())
-    db.add(rec)
-    if rec_in.appointment_id:
+    app = None
+    if rec_in.appointment_id is not None:
         app = db.query(Appointment).filter(Appointment.appointment_id == rec_in.appointment_id).first()
-        if app:
-            app.status = "COMPLETED"
+        if not app:
+            raise HTTPException(status_code=404, detail="Không tìm thấy lịch hẹn")
+        if app.pet_id != rec_in.pet_id:
+            raise HTTPException(status_code=422, detail="Lịch hẹn không thuộc thú cưng này")
+        if app.status == "CANCELLED":
+            raise HTTPException(status_code=409, detail="Không thể tạo hồ sơ cho lịch hẹn đã hủy")
+    rec = CareRecord(**rec_in.model_dump())
+    db.add(rec)
+    if app is not None:
+        app.status = "COMPLETED"
     db.commit()
     db.refresh(rec)
     return rec

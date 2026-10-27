@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_role
 from ..database import get_db
 from ..models import (Appointment, Invoice, InvoiceItem, Owner, Payment, Pet, Service,
                       VaccinationReminder)
@@ -26,7 +26,7 @@ def _revenue_and_debt(db: Session):
 
 
 @router.get("/dashboard", response_model=DashboardStats)
-def get_dashboard_stats(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_dashboard_stats(db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"]))):
     total_owners = db.query(Owner).count()
     total_pets = db.query(Pet).count()
     total_appointments = db.query(Appointment).count()
@@ -56,7 +56,7 @@ def get_dashboard_stats(db: Session = Depends(get_db), current_user=Depends(get_
 
 
 @router.get("/services")
-def service_stats(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def service_stats(db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"]))):
     """Thống kê theo dịch vụ: số lượt đặt (không tính lịch hủy), số lượt hoàn thành, doanh thu ghi trên hóa đơn."""
     rows = []
     for srv in db.query(Service).all():
@@ -76,7 +76,7 @@ def service_stats(db: Session = Depends(get_db), current_user=Depends(get_curren
 
 @router.get("/revenue")
 def revenue_by_period(period: str = Query("month", pattern="^(day|month)$"),
-                      db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+                      db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"]))):
     """Doanh thu đã thu theo ngày hoặc theo tháng."""
     fmt = "%Y-%m-%d" if period == "day" else "%Y-%m"
     totals = defaultdict(float)

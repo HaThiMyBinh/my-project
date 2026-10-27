@@ -85,7 +85,7 @@
         
         <!-- NAVIGATION TABS -->
         <nav class="bg-white rounded-lg p-1.5 shadow-sm border border-slate-200 flex flex-wrap gap-1">
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition active-tab">
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" data-roles="ADMIN RECEPTIONIST" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition active-tab">
                 <i class="fa-solid fa-chart-pie mr-1.5 text-blue-600"></i> Dashboard Thống Kê
             </button>
             <button onclick="switchTab('appointments')" id="tab-appointments" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition">
@@ -103,7 +103,7 @@
             <button onclick="switchTab('vaccine')" id="tab-vaccine" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition">
                 <i class="fa-solid fa-syringe mr-1.5 text-teal-600"></i> Nhắc Tiêm Phòng
             </button>
-            <button onclick="switchTab('invoices')" id="tab-invoices" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition">
+            <button onclick="switchTab('invoices')" id="tab-invoices" data-roles="ADMIN RECEPTIONIST" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition">
                 <i class="fa-solid fa-file-invoice-dollar mr-1.5 text-indigo-600"></i> Hóa Đơn Thanh Toán
             </button>
             <button onclick="switchTab('ai')" id="tab-ai" class="px-4 py-2 text-sm rounded-md font-medium text-slate-600 hover:bg-slate-100 transition">
@@ -218,7 +218,7 @@
                         <option value="CANCELLED">CANCELLED (Đã hủy)</option>
                     </select>
                 </div>
-                <button onclick="openAppointmentModal() " class="bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow flex items-center">
+                <button data-roles="ADMIN RECEPTIONIST" onclick="openAppointmentModal() " class="bg-blue-900 hover:bg-blue-800 text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow flex items-center">
                     <i class="fa-solid fa-plus mr-1.5"></i> Đặt Lịch Hẹn Mới
                 </button>
             </div>
@@ -259,10 +259,10 @@
                     <input type="text" id="searchPet" oninput="loadPets()" placeholder="Tìm tên bé, giống, chủ..." class="w-full border px-3 py-1.5 rounded-lg text-xs">
                 </div>
                 <div class="flex space-x-2">
-                    <button onclick="openOwnerModal()" class="bg-slate-700 hover:bg-slate-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                    <button data-roles="ADMIN RECEPTIONIST" onclick="openOwnerModal()" class="bg-slate-700 hover:bg-slate-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
                         <i class="fa-solid fa-user-plus mr-1"></i> Thêm Chủ Nuôi
                     </button>
-                    <button onclick="openPetModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                    <button data-roles="ADMIN RECEPTIONIST" onclick="openPetModal()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
                         <i class="fa-solid fa-plus mr-1"></i> Thêm Thú Cưng
                     </button>
                 </div>
@@ -294,10 +294,10 @@
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
                 <h3 class="font-bold text-sm text-slate-700">Danh Mục Dịch Vụ & Bảng Giá Tiêu Chuẩn</h3>
                 <div class="flex gap-2">
-                    <button onclick="openServiceModal()" class="bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                    <button data-roles="ADMIN" onclick="openServiceModal()" class="bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
                         <i class="fa-solid fa-plus mr-1"></i> Thêm Dịch Vụ
                     </button>
-                    <button onclick="openPackageModal()" class="bg-fuchsia-700 hover:bg-fuchsia-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                    <button data-roles="ADMIN" onclick="openPackageModal()" class="bg-fuchsia-700 hover:bg-fuchsia-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
                         <i class="fa-solid fa-box-open mr-1"></i> Thêm Gói Dịch Vụ
                     </button>
                 </div>
@@ -349,7 +349,7 @@
                 <div>
                     <h3 class="font-bold text-sm text-slate-700">Lịch Nhắc Tiêm Phòng & Tẩy Giun</h3>
                     <p class="text-xs text-slate-500">Lịch tiêm phòng chỉ mang tính thông tin</p>
-                    <button onclick="openVaccineModal()" class="mt-2 bg-blue-900 text-white px-3 py-2 rounded">Thêm lịch nhắc</button>
+                    <button data-roles="ADMIN RECEPTIONIST" onclick="openVaccineModal()" class="mt-2 bg-blue-900 text-white px-3 py-2 rounded">Thêm lịch nhắc</button>
                 </div>
             </div>
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
@@ -387,7 +387,7 @@
                         <option value="UNPAID">Chưa thu</option>
                         <option value="CANCELLED">Đã hủy</option>
                     </select>
-                    <button onclick="openInvoiceModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
+                    <button data-roles="ADMIN RECEPTIONIST" onclick="openInvoiceModal()" class="bg-indigo-700 hover:bg-indigo-800 text-white font-semibold text-xs px-3.5 py-2 rounded-lg transition">
                         <i class="fa-solid fa-plus mr-1"></i> Lập Hóa Đơn
                     </button>
                 </div>

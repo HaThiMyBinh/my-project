@@ -60,7 +60,7 @@ def get_invoices(
     status_filter: Optional[str] = Query(None, alias="status", description="PAID, PARTIAL, UNPAID, CANCELLED"),
     owner_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user),
+    current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"])),
 ):
     q = db.query(Invoice)
     if status_filter:
@@ -71,7 +71,7 @@ def get_invoices(
 
 
 @router.get("/{invoice_id}", response_model=InvoiceOut)
-def get_invoice(invoice_id: int, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+def get_invoice(invoice_id: int, db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"]))):
     return to_out(_get(db, invoice_id))
 
 

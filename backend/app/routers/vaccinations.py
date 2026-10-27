@@ -57,7 +57,7 @@ def update_vaccination(reminder_id: int, vac_in: VaccinationCreate, db: Session 
     return vac
 
 @router.delete("/{reminder_id}")
-def delete_vaccination(reminder_id: int, db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN", "RECEPTIONIST"]))):
+def delete_vaccination(reminder_id: int, db: Session = Depends(get_db), current_user=Depends(require_role(["ADMIN"]))):
     vac = db.query(VaccinationReminder).filter(VaccinationReminder.reminder_id == reminder_id).first()
     if not vac:
         raise HTTPException(status_code=404, detail="Không tìm thấy lịch nhắc tiêm")
