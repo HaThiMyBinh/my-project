@@ -18,7 +18,8 @@ def test_create_invoice_calculates_totals(client, auth):
     assert body["total_amount"] == 550000
     assert body["discount"] == 50000
     assert body["final_amount"] == 500000
-    assert body["status"] == "PAID"
+    assert body["status"] == "UNPAID"
+    assert body["paid_amount"] == 0 and body["remaining"] == 500000 and body["payments"] == []
     assert len(body["items"]) == 2
     assert {i["subtotal"] for i in body["items"]} == {400000, 150000}
 
@@ -30,7 +31,7 @@ def test_discount_larger_than_subtotal_gives_zero(client, auth):
 
 
 def test_payment_record_is_created(client, auth, db_session):
-    r = client.post("/api/invoices", json=invoice(payment_method="CHUYEN_KHOAN"), headers=auth("letan"))
+    r = client.post("/api/invoices", json=invoice(payment_method="CHUYEN_KHOAN", paid_amount=550000), headers=auth("letan"))
     inv_id = r.json()["invoice_id"]
     pay = db_session.query(models.Payment).filter(models.Payment.invoice_id == inv_id).one()
     assert pay.payment_method == "CHUYEN_KHOAN"
@@ -56,8 +57,8 @@ def test_permissions(client, auth):
 
 
 def test_dashboard_revenue_matches_invoices(client, auth):
-    client.post("/api/invoices", json=invoice(), headers=auth("letan"))                    # 550000
-    client.post("/api/invoices", json=invoice(discount=50000), headers=auth("letan"))      # 500000
+    client.post("/api/invoices", json=invoice(paid_amount=550000), headers=auth("letan")) # 550000
+    client.post("/api/invoices", json=invoice(discount=50000, paid_amount=500000), headers=auth("letan")) # 500000
     stats = client.get("/api/analytics/dashboard", headers=auth("admin")).json()
     assert stats["total_revenue"] == 1_050_000
     assert stats["total_owners"] == 1 and stats["total_pets"] == 1
@@ -116,7 +117,7 @@ def test_payment_validation(client, auth):
 def test_cancelled_invoice_excluded_from_revenue_and_debt(client, auth):
     h = auth("admin")
     a = client.post("/api/invoices", json=invoice(paid_amount=100000), headers=h).json()["invoice_id"]   # nợ 450000
-    client.post("/api/invoices", json=invoice(), headers=h)                                               # thu đủ 550000
+    client.post("/api/invoices", json=invoice(paid_amount=550000), headers=h)                            # thu đủ 550000
     stats = client.get("/api/analytics/dashboard", headers=h).json()
     assert stats["total_revenue"] == 650000 and stats["total_debt"] == 450000
     assert client.post(f"/api/invoices/{a}/cancel", headers=auth("letan")).status_code == 403      # chỉ ADMIN
@@ -151,10 +152,27 @@ def test_service_and_revenue_statistics(client, auth):
     for d in ("2099-03-01", "2099-03-02"):
         client.post("/api/appointments", json={"pet_id": 1, "service_id": 1, "groomer_name": "A",
                     "appointment_date": d, "start_time": "09:00", "end_time": "10:00"}, headers=h)
-    client.post("/api/invoices", json=invoice(), headers=h)
+    client.post("/api/invoices", json=invoice(paid_amount=550000), headers=h)
     stats = {s["service_id"]: s for s in client.get("/api/analytics/services", headers=h).json()}
     assert stats[1]["booked_count"] == 2 and stats[2]["booked_count"] == 0
     assert stats[1]["revenue"] == 400000 and stats[2]["revenue"] == 150000
     months = client.get("/api/analytics/revenue", params={"period": "month"}, headers=h).json()
     assert len(months) == 1 and months[0]["revenue"] == 550000
     assert client.get("/api/analytics/revenue", params={"period": "year"}, headers=h).status_code == 422
+
+
+def test_omitted_or_null_paid_amount_is_unpaid_and_payment_changes_status(client, auth):
+    headers = auth("letan")
+    for initial in (invoice(), invoice(paid_amount=None)):
+        response = client.post("/api/invoices", json=initial, headers=headers)
+        assert response.status_code == 201
+        bill = response.json()
+        assert bill["status"] == "UNPAID" and bill["paid_amount"] == 0
+        assert bill["remaining"] == 550000 and bill["payments"] == []
+        stats = client.get("/api/analytics/dashboard", headers=headers).json()
+        revenue_before = stats["total_revenue"]
+        part = client.post(f"/api/invoices/{bill['invoice_id']}/payments", json={"amount": 100000}, headers=headers)
+        assert part.status_code == 201 and part.json()["status"] == "PARTIAL"
+        paid = client.post(f"/api/invoices/{bill['invoice_id']}/payments", json={"amount": 450000}, headers=headers)
+        assert paid.status_code == 201 and paid.json()["status"] == "PAID"
+        assert client.get("/api/analytics/dashboard", headers=headers).json()["total_revenue"] == revenue_before + 550000

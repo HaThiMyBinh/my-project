@@ -42,7 +42,9 @@ dashboard (doanh thu đã thu, công nợ, lượt theo dịch vụ, doanh thu t
 | Hồ sơ chăm sóc | `PUT /api/care-records/{id}`, `DELETE /api/care-records/{id}` (ADMIN) |
 | Thống kê | `GET /api/analytics/dashboard`, `/services`, `/revenue?period=month\|day` |
 
-Trạng thái hóa đơn: `PAID` (đã thu đủ) · `PARTIAL` (còn nợ) · `UNPAID` (chưa thu) · `CANCELLED` (không tính doanh thu/công nợ).
+Trạng thái hóa đơn: `PAID` (đã thu đủ) · `PARTIAL` (còn nợ) · `UNPAID` (chưa thu) · `CANCELLED` (không tính doanh thu/công nợ). Hóa đơn có số tiền phải thu lớn hơn 0 mặc định là chưa thu; dùng nút **Thu tiền** để xác nhận thanh toán, hoặc nhập số tiền khách thực trả ngay khi lập. Hóa đơn bằng 0 đồng không còn số tiền phải thu.
+
+Lịch đang chờ có nút **Hoàn tất**; cả ba vai trò có thể xác nhận sau khi dịch vụ được thực hiện. Lịch đã hủy hoặc đã hoàn tất không thể xác nhận lại. Hệ thống chưa giới hạn lịch theo từng nhân viên.
 
 **AI (Gemini):**
 | Chức năng | Endpoint | Mô tả |
@@ -68,7 +70,7 @@ Trạng thái hóa đơn: `PAID` (đã thu đủ) · `PARTIAL` (còn nợ) · `U
 |---|---|---|---|
 | Khách hàng, thú cưng | Xem, thêm, sửa, xóa | Xem, thêm, sửa | Xem; thông tin liên hệ được che |
 | Dịch vụ và gói | Xem, thêm, sửa, xóa | Xem | Xem |
-| Lịch hẹn | Xem, đặt, đổi, hủy | Xem, đặt, đổi, hủy | Xem |
+| Lịch hẹn | Xem, đặt, đổi, hủy, hoàn tất | Xem, đặt, đổi, hủy, hoàn tất | Xem, hoàn tất |
 | Hồ sơ chăm sóc | Xem, thêm, sửa, xóa | Xem, thêm, sửa | Xem, thêm, sửa |
 | Lịch tiêm nhắc | Xem, thêm, sửa, xóa | Xem, thêm, sửa, đánh dấu hoàn thành | Xem |
 | Hóa đơn và thanh toán | Xem, lập, thu tiền, hủy | Xem, lập, thu tiền | Không truy cập |

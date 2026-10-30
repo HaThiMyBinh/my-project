@@ -252,9 +252,10 @@ async function loadAppointments() {
                     </td>
                     <td class="p-3">${statusBadge}</td>
                     <td class="p-3 text-right space-x-1">
-                        ${a.status === "CONFIRMED" && currentRole !== "GROOMER" ? `
-                            <button onclick="openAppointmentModal(${a.appointment_id})" class="text-blue-700 px-2">Sửa</button>
-                            ${currentRole !== "GROOMER" ? `<button onclick="cancelApp(${a.appointment_id})" class="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-xs" title="Hủy lịch">
+                        ${a.status === "CONFIRMED" ? `
+                            <button onclick="completeApp(${a.appointment_id})" class="text-emerald-700 hover:bg-emerald-50 px-2 py-1 rounded text-xs font-semibold">Hoàn tất</button>
+                            ${currentRole !== "GROOMER" ? `<button onclick="openAppointmentModal(${a.appointment_id})" class="text-blue-700 px-2">Sửa</button>
+                            <button onclick="cancelApp(${a.appointment_id})" class="text-rose-600 hover:bg-rose-50 px-2 py-1 rounded text-xs" title="Hủy lịch">
                                 <i class="fa-solid fa-ban"></i>
                             </button>` : ""}
                         ` : ""}
@@ -298,6 +299,14 @@ async function handleCreateAppointment(e) {
     } catch (err) {
         showToast(err.message, true);
     }
+}
+
+async function completeApp(appId) {
+    if (!confirm("Xác nhận dịch vụ của lịch hẹn này đã hoàn tất?")) return;
+    await sendJson(`/api/appointments/${appId}/complete`, "PATCH", null, "Đã hoàn tất lịch hẹn", async () => {
+        await loadAppointments();
+        if (currentRole !== "GROOMER") await loadDashboardStats();
+    });
 }
 
 async function cancelApp(appId) {
@@ -763,7 +772,7 @@ async function openInvoiceModal() {
     document.getElementById("invQty").value = 1;
     document.getElementById("invDiscount").value = 0;
     const paid = document.getElementById("invPaid");
-    paid.value = ""; delete paid.dataset.touched;
+    paid.value = "0";
     updateInvoicePreview();
     openModal("modalInvoice");
 }
@@ -779,7 +788,6 @@ function invoiceDraft() {
 function updateInvoicePreview() {
     const d = invoiceDraft();
     const paidEl = document.getElementById("invPaid");
-    if (!paidEl.dataset.touched) paidEl.value = d.final;      // mặc định thanh toán đủ, sửa số nhỏ hơn để ghi nợ
     const paid = parseFloat(paidEl.value) || 0;
     document.getElementById("invPreview").textContent =
         `Tạm tính: ${d.subtotal.toLocaleString()} đ · Phải thu: ${d.final.toLocaleString()} đ · Còn nợ: ${Math.max(0, d.final - paid).toLocaleString()} đ`;

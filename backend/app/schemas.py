@@ -218,7 +218,7 @@ class InvoiceCreate(BaseModel):
     appointment_id: Optional[int] = None
     discount: float = Field(0.0, ge=0)
     payment_method: str = "TIEN_MAT"
-    paid_amount: Optional[float] = Field(None, ge=0)   # bỏ trống = thanh toán đủ; nhỏ hơn tổng = ghi nợ
+    paid_amount: Optional[float] = Field(None, ge=0)   # bỏ trống = chưa thu; có thể ghi nhận tiền trả ngay
     items: List[InvoiceItemCreate] = Field(..., min_length=1)
 
 class InvoiceItemOut(BaseModel):

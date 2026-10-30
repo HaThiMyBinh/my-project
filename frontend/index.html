@@ -688,7 +688,7 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div><label class="font-bold block mb-1">Giảm giá (đ)</label><input id="invDiscount" type="number" min="0" value="0" oninput="updateInvoicePreview()" class="w-full border rounded p-2"></div>
-                    <div><label class="font-bold block mb-1">Khách trả ngay (đ)</label><input id="invPaid" type="number" min="0" oninput="this.dataset.touched='1';updateInvoicePreview()" class="w-full border rounded p-2"></div>
+                    <div><label class="font-bold block mb-1">Khách trả ngay (đ), nếu có</label><input id="invPaid" type="number" min="0" value="0" oninput="updateInvoicePreview()" class="w-full border rounded p-2"><p class="text-slate-500 mt-1">Để 0 nếu khách chưa thanh toán.</p></div>
                 </div>
                 <div><label class="font-bold block mb-1">Hình thức thanh toán</label>
                     <select id="invMethod" class="w-full border rounded p-2">

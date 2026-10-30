@@ -98,7 +98,7 @@ def create_invoice(
 
     subtotal = sum(it.quantity * price for it, price in lines)
     final_total = max(0.0, subtotal - inv_in.discount)
-    paid = final_total if inv_in.paid_amount is None else inv_in.paid_amount
+    paid = inv_in.paid_amount if inv_in.paid_amount is not None else 0.0
     if paid > final_total + EPS:
         raise HTTPException(status_code=422, detail="Số tiền thanh toán vượt quá tổng hóa đơn")
 

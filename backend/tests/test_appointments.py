@@ -98,3 +98,24 @@ def test_filter_appointments(client, auth):
     create(client, h, groomer_name="Thợ Lan", appointment_date="2099-02-01")
     assert len(client.get("/api/appointments", params={"date": "2099-02-01"}, headers=h).json()) == 1
     assert len(client.get("/api/appointments", params={"groomer": "Minh"}, headers=h).json()) == 1
+
+
+def test_complete_appointment_by_each_authorized_role(client, auth):
+    for index, role in enumerate(("admin", "letan", "groomer")):
+        receptionist = auth("letan")
+        appt = create(client, receptionist, appointment_date=f"2099-02-{index+1:02d}").json()
+        appointment_id = appt["appointment_id"]
+        result = client.patch(f"/api/appointments/{appointment_id}/complete", headers=auth(role))
+        assert result.status_code == 200 and result.json()["status"] == "COMPLETED"
+        assert client.patch(f"/api/appointments/{appointment_id}/complete", headers=auth(role)).status_code == 409
+    assert len(client.get("/api/appointments", params={"status":"COMPLETED"}, headers=auth("letan")).json()) == 3
+
+
+def test_cannot_complete_cancelled_missing_or_anonymous_appointment(client, auth):
+    headers = auth("letan")
+    appointment_id = create(client, headers).json()["appointment_id"]
+    assert client.patch(f"/api/appointments/{appointment_id}/complete").status_code == 401
+    assert client.patch("/api/appointments/999/complete", headers=headers).status_code == 404
+    assert client.delete(f"/api/appointments/{appointment_id}", headers=headers).status_code == 200
+    assert client.patch(f"/api/appointments/{appointment_id}/complete", headers=auth("groomer")).status_code == 409
+    assert client.get("/api/appointments", headers=headers).json()[0]["status"] == "CANCELLED"

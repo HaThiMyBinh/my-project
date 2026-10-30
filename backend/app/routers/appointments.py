@@ -114,3 +114,22 @@ def cancel_appointment(
     app.status = "CANCELLED"
     db.commit()
     return {"message": "Đã hủy lịch hẹn thành công"}
+
+
+@router.patch("/{app_id}/complete", response_model=AppointmentOut)
+def complete_appointment(
+    app_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(require_role(["ADMIN", "RECEPTIONIST", "GROOMER"]))
+):
+    """Chỉ hoàn tất lịch đang chờ; không thay đổi lịch đã hủy hoặc hoàn tất."""
+    updated = (db.query(Appointment)
+               .filter(Appointment.appointment_id == app_id, Appointment.status == "CONFIRMED")
+               .update({Appointment.status: "COMPLETED"}, synchronize_session=False))
+    if not updated:
+        existing = db.query(Appointment).filter(Appointment.appointment_id == app_id).first()
+        if not existing:
+            raise HTTPException(status_code=404, detail="Không tìm thấy lịch hẹn")
+        raise HTTPException(status_code=409, detail="Chỉ có thể hoàn tất lịch đang chờ phục vụ")
+    db.commit()
+    return db.query(Appointment).filter(Appointment.appointment_id == app_id).one()
