@@ -98,15 +98,65 @@ python run_app.py               # hoặc double-click run.bat trên Windows
 
 Chạy `cai_dat_gemini.bat`, dán khóa sau `GEMINI_API_KEY=` trong Notepad, lưu và đóng. Khởi động lại bằng `run.bat`. Tệp cấu hình sẵn có được giữ nguyên. `run.bat` không tự nạp lại dữ liệu mẫu; chỉ chạy `seed_data.py` khi muốn xóa dữ liệu cũ để tạo demo.
 
-## 4. Chạy test
-```bash
-pip install -r backend/requirements-dev.txt
+## 4. Kiểm thử
+
+Dự án sử dụng **pytest** để kiểm tra nghiệp vụ, phân quyền, cơ sở dữ liệu và chức năng AI. Các bài test API dùng FastAPI TestClient và CSDL SQLite thử nghiệm; Gemini được **giả lập**, không gửi câu hỏi tới Gemini thật và không cần API key. Bộ lọc an toàn, tình huống Gemini lỗi và nội dung dự phòng cũng được kiểm tra.
+
+### 4.1. Cài đặt và chạy toàn bộ test trên Windows
+
+Mở CMD trong thư mục gốc dự án (cùng thư mục với `run.bat`) và chạy:
+
+```bat
+python -m pip install -r backend\requirements-dev.txt
 cd backend
-pytest
+set "DATABASE_PATH=%TEMP%\petcare-pytest.db"
+python -m pytest -o addopts= -q
 ```
-Test không gọi Gemini thật (đã giả lập). Gồm: lịch hẹn (trùng, liền kề, đổi, hủy, phân quyền, validate),
-hóa đơn (tính tiền, giảm giá, thu nhiều lần, công nợ, hủy, doanh thu), gói dịch vụ, hồ sơ chăm sóc, thống kê, và AI
-(41 câu hỏi: 31 câu bẫy y tế thú y + 10 câu thường, lọc đầu ra, fallback, bảo mật dữ liệu, endpoint).
+
+Biến `DATABASE_PATH` ở trên đưa CSDL khởi tạo khi chạy test vào thư mục tạm, tránh dùng `petcare.db` của ứng dụng. Sau khi chạy xong, đóng cửa sổ CMD này hoặc gõ `set "DATABASE_PATH="` trước khi dùng lại cửa sổ để chạy ứng dụng. Không cần chạy `seed_data.py` để chạy test.
+
+Trên macOS/Linux, từ thư mục gốc dự án:
+
+```bash
+python3 -m pip install -r backend/requirements-dev.txt
+cd backend
+DATABASE_PATH=/tmp/petcare-pytest.db python3 -m pytest -o addopts= -q
+```
+
+### 4.2. Chạy một nhóm test
+
+Sau khi vào thư mục `backend` và đặt `DATABASE_PATH` như trên, có thể chạy riêng:
+
+```bat
+python -m pytest -o addopts= -q tests/test_appointments.py
+python -m pytest -o addopts= -q tests/test_invoices.py
+python -m pytest -o addopts= -q tests/test_care_records.py
+python -m pytest -o addopts= -q tests/test_ai_service.py tests/test_ai_api.py
+python -m pytest -o addopts= -q tests/test_role_permissions.py
+```
+
+### 4.3. Nội dung kiểm thử
+
+| Tệp | Trường hợp | Nội dung chính |
+|---|---:|---|
+| `test_appointments.py` | 13 | Đặt, đổi, hủy và hoàn tất lịch; trùng lịch, lịch liền kề, dữ liệu sai và phân quyền. |
+| `test_invoices.py` | 18 | Tính tiền, giảm giá, hóa đơn chưa thu, thu một phần/nhiều lần, thu đủ, công nợ, hủy và doanh thu. |
+| `test_care_records.py` | 10 | Thêm, xem, sửa, xóa hồ sơ; kiểm tra lịch sai thú cưng, không tồn tại hoặc đã hủy. |
+| `test_crud_management.py` | 2 | Thêm, sửa, xóa lịch nhắc tiêm; kiểm tra quyền và thay đổi chủ nuôi của thú cưng. |
+| `test_packages.py` | 6 | Gói dịch vụ, tính giá và phân quyền. |
+| `test_ai_service.py` | 24 | Prompt, câu hỏi chăm sóc và câu hỏi nguy hiểm, lọc đầu ra, dữ liệu gửi AI và nội dung dự phòng. |
+| `test_ai_api.py` | 15 | API nhắc lịch, tóm tắt hồ sơ, hỏi đáp, xác thực và kiểm tra dữ liệu. |
+| `test_resilience.py` | 8 | Thử lại, ngắt mạch, cache và xử lý khi Gemini không khả dụng. |
+| `test_role_permissions.py` | 21 | Kiểm tra quyền cho quản lý, lễ tân và nhân viên chăm sóc khi gọi API. |
+| `test_security.py` | 13 | Đăng nhập, JWT, che thông tin chủ nuôi, giới hạn tần suất và ràng buộc dữ liệu. |
+| `test_db_tools.py` | 6 | Sao lưu, kiểm tra và khôi phục CSDL. |
+| **Tổng** | **136** | Số trường hợp pytest thu thập được trong bản hiện tại; gồm các trường hợp tham số hóa. |
+
+Kết quả kiểm tra ngày 30/10/2026 trên Python 3.12: **136 passed**, có 757 cảnh báo thư viện; không có test thất bại.
+
+Bộ câu hỏi AI có 41 câu: 14 câu khẩn cấp, 12 câu yêu cầu chẩn đoán/kê đơn, 5 câu vượt rào và 10 câu chăm sóc thông thường. Test kiểm tra hành vi đối với bộ câu hỏi này; không chứng minh AI an toàn trong mọi tình huống.
+
+Khi chạy test, xem dòng cuối của pytest: `passed` là số test đạt; `failed`, `error` hoặc `skipped` cần được phân biệt. Lệnh có mã thoát khác 0 là chưa đạt. Test tự động giả lập Gemini, vì vậy cần thử riêng bằng API key và mạng thực tế nếu muốn xác minh kết nối Gemini.
 
 ## 5. Docker, sao lưu, tài liệu
 * Docker: `docker compose up --build` (xem **DEPLOY.md**: biến môi trường, sao lưu/khôi phục, checklist triển khai, xử lý sự cố).
